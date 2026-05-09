@@ -1,0 +1,6 @@
+-- 创建账户表
+CREATE TABLE IF NOT EXISTS account (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    balance DOUBLE NOT NULL
+);

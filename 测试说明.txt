@@ -1,0 +1,75 @@
+事务传播类型测试指南
+=====================
+
+本项目演示了Spring事务的REQUIRED和NESTED传播类型的区别，特别是方法A调用方法B时，
+是否捕获异常对事务回滚的影响。
+
+启动应用
+--------
+mvn spring-boot:run
+
+或者在IDE中直接运行 Main.java
+
+测试接口
+--------
+
+1. REQUIRED传播类型 - 捕获异常
+   GET http://localhost:8080/api/transaction/required/with-catch
+   
+   预期结果：
+   - 所有数据都会保存（account1、accountB、account2）
+   - 因为方法A捕获了异常，整个事务正常提交
+
+2. REQUIRED传播类型 - 不捕获异常
+   GET http://localhost:8080/api/transaction/required/without-catch
+   
+   预期结果：
+   - 所有数据都不会保存
+   - 因为方法B抛出异常，整个事务回滚
+
+3. NESTED传播类型 - 捕获异常
+   GET http://localhost:8080/api/transaction/nested/with-catch
+   
+   预期结果：
+   - 只有account1和account2会保存，accountB不会保存
+   - 方法B在嵌套事务中执行，异常后回滚到保存点
+   - 方法A捕获异常后继续执行，外层事务正常提交
+
+4. NESTED传播类型 - 不捕获异常
+   GET http://localhost:8080/api/transaction/nested/without-catch
+   
+   预期结果：
+   - 所有数据都不会保存
+   - 虽然方法B可以回滚到保存点，但异常传播到方法A导致外层事务也回滚
+
+5. 查询所有数据
+   GET http://localhost:8080/api/transaction/accounts
+
+6. 清空数据
+   DELETE http://localhost:8080/api/transaction/clear
+
+关键区别
+--------
+
+REQUIRED传播：
+- 方法A和方法B在同一个事务中
+- catch异常：整个事务不会回滚，所有数据都保存
+- 不catch异常：整个事务回滚，所有数据都不保存
+
+NESTED传播：
+- 方法B在嵌套事务中执行（使用保存点机制）
+- catch异常：方法B的数据回滚，方法A的数据正常保存
+- 不catch异常：虽然方法B可以回滚到保存点，但异常传播导致外层事务也回滚
+
+注意事项
+--------
+1. Service内部方法调用必须通过自注入（self）来实现，否则事务注解不会生效
+2. NESTED传播只支持JDBC事务管理器，需要数据库支持保存点（H2支持）
+3. 查看控制台日志可以看到详细的SQL执行和事务管理信息
+
+H2控制台
+--------
+访问 http://localhost:8080/h2-console
+JDBC URL: jdbc:h2:mem:testdb
+用户名: sa
+密码: （空）
